@@ -21,7 +21,7 @@ def create_vocab_stt(dataset):
         stems = preprocess_sentence(sample['sentence'], ps)
         stems = [[stem] for stem in stems]
         stemed_words.extend(stems)
-    vocab = torchtext.vocab.build_vocab_from_iterator(stemed_words, specials=["<pad>", "<unk>"], special_first=True)
+    vocab = torchtext.vocab.build_vocab_from_iterator(stemed_words, specials=["<pad>", "<unk>"], special_first=True, min_freq=2)
     vocab.set_default_index(vocab["<unk>"])
     return vocab
 
@@ -39,7 +39,7 @@ class SSTDataset(torch.utils.data.Dataset):
         sample = self.dataset[idx]
         x = preprocess_sentence(sample['sentence'], self.ps)
         x = [self.vocab[token] for token in x]
-        y = round(sample['label']) + 1     # 0 -> 1, 1 -> 2 (for cross entropy) class 0 for padding
+        y = round(sample['label'])
         return torch.tensor(x, dtype=torch.long), torch.tensor(y, dtype=torch.long)
 
 
@@ -51,7 +51,7 @@ def create_vocab_nli(dataset):
         stems = preprocess_sentence(sample['premise'], ps) + preprocess_sentence(sample['hypothesis'], ps)
         stems = [[stem] for stem in stems]
         stemed_words.extend(stems)
-    vocab = torchtext.vocab.build_vocab_from_iterator(stemed_words, specials=["<pad>", "<unk>"], special_first=True)
+    vocab = torchtext.vocab.build_vocab_from_iterator(stemed_words, specials=["<pad>", "<unk>"], special_first=True, min_freq=2)
     vocab.set_default_index(vocab["<unk>"])
     return vocab
 
@@ -72,19 +72,39 @@ class NLIDataset(torch.utils.data.Dataset):
         x1 = [self.vocab[token] for token in x1]
         x2 = preprocess_sentence(sample['hypothesis'], self.ps)
         x2 = [self.vocab[token] for token in x2]
-        y = sample['label'] + 1     # 0 -> 1, 1 -> 2, 2 -> 3 (for cross entropy) class 0 for padding
+        y = sample['label']
         return torch.tensor(x1, dtype=torch.long), torch.tensor(x2, dtype=torch.long), torch.tensor(y, dtype=torch.long)
+
+
+def collate_fn_stt(batch):
+    x = [item[0] for item in batch]
+    y = [item[1] for item in batch]
+    x = torch.nn.utils.rnn.pad_sequence(x, batch_first=True, padding_value=0)
+    y = torch.stack(y)
+    return x, y
+
+
+def collate_fn_nli(batch):
+    x1 = [item[0] for item in batch]
+    x2 = [item[1] for item in batch]
+    y = [item[2] for item in batch]
+    x1 = torch.nn.utils.rnn.pad_sequence(x1, batch_first=True, padding_value=0)
+    x2 = torch.nn.utils.rnn.pad_sequence(x2, batch_first=True, padding_value=0)
+    y = torch.stack(y)
+    return x1, x2, y
 
 
 if __name__ == '__main__':
     dataset = datasets.load_dataset('sst')
     vocab = create_vocab_stt(dataset["train"])
     train_dataset = SSTDataset(dataset["train"], vocab)
-    print(len(dataset["train"]), len(train_dataset))
-    print(train_dataset[0])
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn_stt)
+    for X, y in tqdm(train_loader):
+        pass
 
     dataset = datasets.load_dataset('multi_nli')
     vocab = create_vocab_nli(dataset["train"])
     train_dataset = NLIDataset(dataset["train"], vocab)
-    print(len(dataset["train"]), len(train_dataset))
-    print(train_dataset[0])
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn_nli)
+    for X1, X2, y in tqdm(train_loader):
+        pass
