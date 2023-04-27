@@ -137,4 +137,5 @@ def sst_train():
 
 if __name__ == "__main__":
     train_losses, valid_losses = sst_train()
-    visulaize_losses(train_losses, valid_losses)
+    #visulaize_losses(train_losses, valid_losses)
+    print(train_losses , valid_losses)
