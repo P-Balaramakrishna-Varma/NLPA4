@@ -207,13 +207,26 @@ if __name__ == "__main__":
     train_sampler = torch.utils.data.RandomSampler(range(len(train_dataset)//100))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=64, collate_fn=collate_fn_nli, sampler=train_sampler)
 
+    test1_dataset = NLIDataset(dataset["validation_matched"], vocab)
+    test1_sampler = torch.utils.data.RandomSampler(range(len(test1_dataset)//100))
+    test1_dataloader = torch.utils.data.DataLoader(test1_dataset, batch_size=64, collate_fn=collate_fn_nli, sampler=test1_sampler)
+
+    test2_dataset = NLIDataset(dataset["validation_mismatched"], vocab)
+    test2_sampler = torch.utils.data.RandomSampler(range(len(test2_dataset)//100))
+    test2_dataloader = torch.utils.data.DataLoader(test2_dataset, batch_size=64, collate_fn=collate_fn_nli, sampler=test2_sampler)
+
+    # Model, optimizer, loss funnction, hyperparameters
     model = ELMoNli(len(vocab), 300, 400, 800, 50).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_func = torch.nn.CrossEntropyLoss()
     epochs = 2
 
-    train_losses, valid_losses = [], []
+    train_losses, test1_losses, test2_losses = [], [], []
     for _ in tqdm(range(epochs)):
         train_nli(model, train_dataloader, optimizer, loss_func, device)
         train_losses.append(eval_nli(model, train_dataloader, loss_func, device))
+        test1_losses.append(eval_nli(model, test1_dataloader, loss_func, device))
+        test2_losses.append(eval_nli(model, test2_dataloader, loss_func, device))
+    
+    print(train_losses, test1_losses, test2_losses)
    
