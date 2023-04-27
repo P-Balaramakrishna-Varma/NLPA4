@@ -135,6 +135,47 @@ def sst_train():
 
 
 
+class ELMoNli(torch.nn.Module):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sen_embd_dim, mlp_hidden, dropout=0):
+        super().__init__()
+        self.elmo = ELMo(vocab_size, embedding_dim, hidden_dim, dropout)
+        self.mlp1 = torch.nn.Linear(2 * sen_embd_dim, mlp_hidden)
+        self.mlp2 = torch.nn.Linear(mlp_hidden, 3)
+
+    def forward(self, x1, x2):
+        # word embeddings
+        x1, x2 = self.elmo(x1), self.elmo(x2)
+  
+        # sentence_embeddings
+        premise_emd, hyothesis_emd = x1.mean(dim=1), x2.mean(dim=1)
+        final_emd = torch.cat((premise_emd, hyothesis_emd), dim=1)
+
+        # classification
+        logits = self.mlp2(self.mlp1(final_emd))
+        return logits
+
+
+def train_nli(model, train_loader, optimizer, loss_func, device):
+    model.train()
+    for X1, X2, y in tqdm(train_loader):
+        # data gathering
+        X1, X2, y = X1.to(device), X2.to(device), y.to(device)
+        
+        # forward pass
+        logits = model(X1, X2)
+        loss = loss_func(logits, y)
+        
+        # backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
+
+
+
+
+
 if __name__ == "__main__":
     # train_losses, valid_losses = sst_train()
     # #visulaize_losses(train_losses, valid_losses)
@@ -147,9 +188,12 @@ if __name__ == "__main__":
     vocab = create_vocab_nli(dataset["train"])
     
     train_dataset = NLIDataset(dataset["train"], vocab)
-    train_sampler = torch.utils.data.RandomSampler(range(len(train_dataset)//10))
+    train_sampler = torch.utils.data.RandomSampler(range(len(train_dataset)//100))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=64, collate_fn=collate_fn_nli, sampler=train_sampler)
 
-    for X1, X2, y in tqdm(train_dataloader):
-        pass
+    model = ELMoNli(len(vocab), 300, 400, 800, 50).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    loss_func = torch.nn.CrossEntropyLoss()
+
+    train_nli(model, train_dataloader, optimizer, loss_func, device)
    
