@@ -7,52 +7,29 @@ import torch
 class ELMo(torch.nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout=0):
         super().__init__()
-        self.embedding = torch.nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.embedding = torch.nn.Embedding(vocab_size, embedding_dim, padding_idx=0)   # replace with word to vec
         self.forward_lstm = torch.nn.LSTM(embedding_dim, hidden_dim, 2, batch_first=True, dropout=dropout)
-        self.projection = torch.nn.Linear(hidden_dim, vocab_size)
 
     def forward(self, x):
+        # global embeddings
         x = self.embedding(x)
+
+        # forward contexual embedding
         h, _ = self.forward_lstm(x)
-        logits_f = self.projection(h)
-        return logits_f
+        return h
     
 
-#ignore index 0
-def train(model, train_loader, optimizer, loss_func, device):
-    model.train()
-    for X, y in train_loader:
+
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    dataset = datasets.load_dataset('sst')
+    vocab = create_vocab_stt(dataset["train"])
+    train_dataset = SSTDataset(dataset["train"], vocab)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn=collate_fn_stt)
+
+    model = ELMo(len(vocab), 300, 400).to(device)
+    for X, y in tqdm(train_loader):
         X = X.to(device)
-        seq_len = X.shape[1]
-        
-        # Forward pass
-        logits_f = model(X)
-        classes = X[:, 1:]
-        logits_f = torch.transpose(logits_f, 1, 2)
-        loss_value_f = loss_func(logits_f, classes)
-        loss_value = loss_value_f
-        
-        # Backpropagation
-        optimizer.zero_grad()
-        loss_value.backward()
-        optimizer.step()
-
-
-def eval(model, data_loader, loss_func, device):
-    model.eval()
-    total_loss = 0
-    total_count = 0
-    with torch.no_grad():
-        for X, y in data_loader:
-            X = X.to(device)
-            seq_len = X.shape[1]
-
-            logits_f = model(X)
-            
-            classes = X[:, 1:]
-            logits_f = torch.transpose(logits_f, 1, 2)
-            loss_value_f = loss_func(logits_f, classes)
-            loss_value = loss_value_f
-            total_loss += loss_value.item() / seq_len
-            total_count += X.shape[0]
-    return total_loss / total_count
+        y = y.to(device)
+        logits = model(X)

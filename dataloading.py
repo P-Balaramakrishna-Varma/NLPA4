@@ -81,6 +81,9 @@ def collate_fn_stt(batch):
     y = [item[1] for item in batch]
     x = torch.nn.utils.rnn.pad_sequence(x, batch_first=True, padding_value=0)
     y = torch.stack(y)
+    assert (x.shape[0] == y.shape[0])
+    assert (len(y.shape) == 1)
+    assert (len(x.shape) == 2)
     return x, y
 
 
