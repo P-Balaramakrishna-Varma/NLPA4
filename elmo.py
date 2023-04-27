@@ -61,6 +61,22 @@ class ELMoSentiment(torch.nn.Module):
         return logits
 
 
+def train_stt(model, train_loader, optimizer, loss_func, device):
+    model.train()
+    for X, y in tqdm(train_loader):
+        # data gathering
+        X, y = X.to(device), y.to(device)
+        
+        # forward pass
+        logits = model(X)
+        loss = loss_func(logits, y)
+        
+        # backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -71,7 +87,7 @@ if __name__ == "__main__":
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, collate_fn=collate_fn_stt)
 
     model = ELMoSentiment(len(vocab), 300, 400, 800).to(device)
-    for X, y in tqdm(train_loader):
-        X = X.to(device)
-        y = y.to(device)
-        logits = model(X)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+    loss_func = torch.nn.CrossEntropyLoss()
+
+    train_stt(model, train_loader, optimizer, loss_func, device)
