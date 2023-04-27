@@ -1,2 +1,4 @@
-- dataprocessin nli dataset to large
-- 
+- dataloading.py contains abstractions for loading data.
+- elmo.py contains Elmo model, downstream task models, training function.
+- use ```sst_train``` for sentiment analysis.
+- use ```nli_train``` for natural language inference.
