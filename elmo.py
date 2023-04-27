@@ -157,7 +157,7 @@ class ELMoNli(torch.nn.Module):
 
 def train_nli(model, train_loader, optimizer, loss_func, device):
     model.train()
-    for X1, X2, y in tqdm(train_loader):
+    for X1, X2, y in train_loader:
         # data gathering
         X1, X2, y = X1.to(device), X2.to(device), y.to(device)
         
@@ -169,6 +169,22 @@ def train_nli(model, train_loader, optimizer, loss_func, device):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+
+def eval_nli(model, dataloader, loss_func, device):
+    model.eval()
+    loss = 0
+    count = 0
+    for X1, X2, y in dataloader:
+        # data gathering
+        X1, X2, y = X1.to(device), X2.to(device), y.to(device)
+        
+        # forward pass
+        logits = model(X1, X2)
+        loss += loss_func(logits, y).item() 
+        count += 1
+
+    return loss / count   
 
 
 
@@ -194,6 +210,10 @@ if __name__ == "__main__":
     model = ELMoNli(len(vocab), 300, 400, 800, 50).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_func = torch.nn.CrossEntropyLoss()
+    epochs = 2
 
-    train_nli(model, train_dataloader, optimizer, loss_func, device)
+    train_losses, valid_losses = [], []
+    for _ in tqdm(range(epochs)):
+        train_nli(model, train_dataloader, optimizer, loss_func, device)
+        train_losses.append(eval_nli(model, train_dataloader, loss_func, device))
    
