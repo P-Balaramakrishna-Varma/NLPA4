@@ -1,6 +1,8 @@
 from dataloading import *
 
 import torch
+import matplotlib.pyplot as plt
+
 
 
 
@@ -42,7 +44,6 @@ class ELMo(torch.nn.Module):
         return embeddings
 
 
-
 class ELMoSentiment(torch.nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, sen_embd_dim, dropout=0):
         super().__init__()
@@ -77,7 +78,6 @@ def train_stt(model, train_loader, optimizer, loss_func, device):
         optimizer.step()
 
 
-
 def eval_stt(model, dataloader, loss_func, device):
     model.eval()
     loss = 0
@@ -94,8 +94,14 @@ def eval_stt(model, dataloader, loss_func, device):
     return loss / count   
 
 
+def visulaize_losses(train_losses, valid_losses):
+    plt.plot(train_losses, label="train")
+    plt.plot(valid_losses, label="valid")
+    plt.legend()
+    plt.show()
 
-if __name__ == "__main__":
+
+def sst_train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Data creation part
@@ -114,7 +120,7 @@ if __name__ == "__main__":
     model = ELMoSentiment(len(vocab), 300, 400, 800).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_func = torch.nn.CrossEntropyLoss()
-    epochs = 10
+    epochs = 1
 
     # Training
     train_losses = []
@@ -124,4 +130,11 @@ if __name__ == "__main__":
         train_losses.append(eval_stt(model, train_loader, loss_func, device))
         valid_losses.append(eval_stt(model, valid_loader, loss_func, device))
     
-    print(train_losses, valid_losses)
+    return train_losses, valid_losses
+
+
+
+
+if __name__ == "__main__":
+    train_losses, valid_losses = sst_train()
+    visulaize_losses(train_losses, valid_losses)
