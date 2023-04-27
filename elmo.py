@@ -78,6 +78,22 @@ def train_stt(model, train_loader, optimizer, loss_func, device):
 
 
 
+def eval_stt(model, dataloader, loss_func, device):
+    model.eval()
+    loss = 0
+    count = 0
+    for X, y in dataloader:
+        # data gathering
+        X, y = X.to(device), y.to(device)
+        
+        # forward pass
+        logits = model(X)
+        loss += loss_func(logits, y).item() 
+        count += 1
+
+    return loss / count   
+
+
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -91,3 +107,4 @@ if __name__ == "__main__":
     loss_func = torch.nn.CrossEntropyLoss()
 
     train_stt(model, train_loader, optimizer, loss_func, device)
+    print(eval_stt(model, train_loader, loss_func, device))
