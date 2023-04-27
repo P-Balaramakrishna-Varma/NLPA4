@@ -2,7 +2,7 @@ from dataloading import *
 
 import torch
 import matplotlib.pyplot as plt
-
+import torchmetrics
 
 
 
@@ -82,16 +82,18 @@ def eval_stt(model, dataloader, loss_func, device):
     model.eval()
     loss = 0
     count = 0
+    acc = 0
     for X, y in dataloader:
         # data gathering
         X, y = X.to(device), y.to(device)
         
         # forward pass
         logits = model(X)
-        loss += loss_func(logits, y).item() 
+        loss += loss_func(logits, y).item()
+        acc += torchmetrics.functional.accuracy(logits.argmax(dim=1), y, task="multiclass", num_classes=2).item()
         count += 1
 
-    return loss / count   
+    return loss / count, acc / count  
 
 
 def visulaize_losses_stt(train_losses, valid_losses):
@@ -120,17 +122,18 @@ def sst_train():
     model = ELMoSentiment(len(vocab), 300, 400, 800).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_func = torch.nn.CrossEntropyLoss()
-    epochs = 1
+    epochs = 2
 
     # Training
     train_losses = []
     valid_losses = []
     for epoch in tqdm(range(epochs)):
         train_stt(model, train_loader, optimizer, loss_func, device)
-        train_losses.append(eval_stt(model, train_loader, loss_func, device))
-        valid_losses.append(eval_stt(model, valid_loader, loss_func, device))
+        train_losses.append(eval_stt(model, train_loader, loss_func, device)[0])
+        valid_losses.append(eval_stt(model, valid_loader, loss_func, device)[0])
     
-    return train_losses, valid_losses
+    test_accuracy = eval_stt(model, test_loader, loss_func, device)[1]
+    return train_losses, valid_losses, test_accuracy
 
 
 
@@ -234,5 +237,5 @@ def visulaize_losses_stt(train_losses, test1_loss, test2_loss):
     
 
 if __name__ == "__main__":
-    out = nli_train()
+    out = sst_train()
     print(out)
