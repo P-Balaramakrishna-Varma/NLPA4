@@ -2,6 +2,7 @@ name: nlpa4
 channels:
   - pytorch
   - nvidia
+  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -13,8 +14,8 @@ dependencies:
   - brotli-bin=1.0.9=h5eee18b_7
   - brotlipy=0.7.0=py310h7f8727e_1002
   - bzip2=1.0.8=h7b6447c_0
-  - ca-certificates=2023.01.10=h06a4308_0
-  - certifi=2022.12.7=py310h06a4308_0
+  - ca-certificates=2022.12.7=ha878542_0
+  - certifi=2022.12.7=pyhd8ed1ab_0
   - cffi=1.15.1=py310h5eee18b_3
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
   - click=8.0.4=py310h06a4308_0
@@ -161,6 +162,7 @@ dependencies:
   - toml=0.10.2=pyhd3eb1b0_0
   - torchaudio=2.0.0=py310_cu118
   - torchdata=0.6.0=py310
+  - torchmetrics=0.11.4=pyhd8ed1ab_0
   - torchtext=0.15.0=py310
   - torchtriton=2.0.0=py310
   - torchvision=0.15.0=py310_cu118
