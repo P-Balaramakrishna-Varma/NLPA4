@@ -136,6 +136,20 @@ def sst_train():
 
 
 if __name__ == "__main__":
-    train_losses, valid_losses = sst_train()
-    #visulaize_losses(train_losses, valid_losses)
-    print(train_losses , valid_losses)
+    # train_losses, valid_losses = sst_train()
+    # #visulaize_losses(train_losses, valid_losses)
+    # print(train_losses , valid_losses)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Data creation part
+    dataset = datasets.load_dataset('multi_nli')
+    vocab = create_vocab_nli(dataset["train"])
+    
+    train_dataset = NLIDataset(dataset["train"], vocab)
+    train_sampler = torch.utils.data.RandomSampler(range(len(train_dataset)//10))
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=64, collate_fn=collate_fn_nli, sampler=train_sampler)
+
+    for X1, X2, y in tqdm(train_dataloader):
+        pass
+   
