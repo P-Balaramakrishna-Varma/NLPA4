@@ -82,7 +82,6 @@ def eval_stt(model, dataloader, loss_func, device):
     model.eval()
     loss = 0
     count = 0
-    acc = 0
     for X, y in dataloader:
         # data gathering
         X, y = X.to(device), y.to(device)
@@ -90,10 +89,28 @@ def eval_stt(model, dataloader, loss_func, device):
         # forward pass
         logits = model(X)
         loss += loss_func(logits, y).item()
-        acc += torchmetrics.functional.accuracy(logits.argmax(dim=1), y, task="multiclass", num_classes=2).item()
         count += 1
 
-    return loss / count, acc / count  
+    return loss / count
+
+
+def get_pred_stt(model, dataloader, device):
+    model.eval()
+    preds, acts = [], []
+    for X, y in dataloader:
+        X, y = X.to(device), y.to(device)
+        logits = model(X)
+        preds.append(logits.argmax(dim=1))
+        acts.append(y)
+    return torch.cat(preds, dim=0), torch.cat(acts, dim=0)
+
+
+def get_stats_sst(preds, acts):
+    acc = torchmetrics.functional.accuracy(preds, acts, task='binary')
+    f1_score = torchmetrics.functional.f1_score(preds, acts, task='binary')
+    precision = torchmetrics.functional.precision(preds, acts, task='binary')
+    recall = torchmetrics.functional.recall(preds, acts, task='binary', average='macro')
+    return acc, precision, recall, f1_score
 
 
 def visulaize_losses_stt(train_losses, valid_losses):
@@ -122,18 +139,23 @@ def sst_train():
     model = ELMoSentiment(len(vocab), 300, 400, 800).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_func = torch.nn.CrossEntropyLoss()
-    epochs = 2
+    epochs = 1
 
     # Training
     train_losses = []
     valid_losses = []
     for epoch in tqdm(range(epochs)):
         train_stt(model, train_loader, optimizer, loss_func, device)
-        train_losses.append(eval_stt(model, train_loader, loss_func, device)[0])
-        valid_losses.append(eval_stt(model, valid_loader, loss_func, device)[0])
-    
-    test_accuracy = eval_stt(model, test_loader, loss_func, device)[1]
-    return train_losses, valid_losses, test_accuracy
+        train_losses.append(eval_stt(model, train_loader, loss_func, device))
+        valid_losses.append(eval_stt(model, valid_loader, loss_func, device))
+
+    # Evaluation
+    preds, acts = get_pred_stt(model, test_loader, device)
+    stats = get_stats_sst(preds, acts)
+    return train_losses, valid_losses, stats
+
+
+
 
 
 
@@ -190,6 +212,25 @@ def eval_nli(model, dataloader, loss_func, device):
     return loss / count   
 
 
+def get_pred_nli(model, dataloader, device):
+    model.eval()
+    preds, acts = [], []
+    for X1, X2, y in dataloader:
+        X1, X2, y = X1.to(device), X2.to(device), y.to(device)
+        logits = model(X1, X2)
+        preds.append(logits.argmax(dim=1))
+        acts.append(y)
+    return torch.cat(preds, dim=0), torch.cat(acts, dim=0)
+
+
+def get_stats_nli(preds, acts):
+    acc = torchmetrics.functional.accuracy(preds, acts, task='multiclass', num_classes=3)
+    f1_score = torchmetrics.functional.f1_score(preds, acts, task='multiclass', num_classes=3)
+    precision = torchmetrics.functional.precision(preds, acts, task='multiclass', num_classes=3, average='macro')
+    recall = torchmetrics.functional.recall(preds, acts, task='multiclass', num_classes=3, average='macro')
+    return acc, precision, recall, f1_score
+
+
 def nli_train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -213,7 +254,7 @@ def nli_train():
     model = ELMoNli(len(vocab), 300, 400, 800, 50).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     loss_func = torch.nn.CrossEntropyLoss()
-    epochs = 2
+    epochs = 1
 
     train_losses, test1_losses, test2_losses = [], [], []
     for _ in tqdm(range(epochs)):
@@ -222,7 +263,11 @@ def nli_train():
         test1_losses.append(eval_nli(model, test1_dataloader, loss_func, device))
         test2_losses.append(eval_nli(model, test2_dataloader, loss_func, device))
     
-    return train_losses, test1_losses, test2_losses
+    # Evaluation
+    preds, acts = get_pred_nli(model, test1_dataloader, device)
+    stats = get_stats_nli(preds, acts)
+
+    return train_losses, test1_losses, test2_losses, stats
 
 
 def visulaize_losses_stt(train_losses, test1_loss, test2_loss):
@@ -234,8 +279,12 @@ def visulaize_losses_stt(train_losses, test1_loss, test2_loss):
 
 
 
-    
+
+
 
 if __name__ == "__main__":
-    out = sst_train()
-    print(out)
+    out1, out2, out3, stats = nli_train()
+    print("acc:", stats[0])
+    print("precion:", stats[1])
+    print("recall:", stats[2])
+    print("f1_score:", stats[3])
