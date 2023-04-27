@@ -94,7 +94,7 @@ def eval_stt(model, dataloader, loss_func, device):
     return loss / count   
 
 
-def visulaize_losses(train_losses, valid_losses):
+def visulaize_losses_stt(train_losses, valid_losses):
     plt.plot(train_losses, label="train")
     plt.plot(valid_losses, label="valid")
     plt.legend()
@@ -187,16 +187,7 @@ def eval_nli(model, dataloader, loss_func, device):
     return loss / count   
 
 
-
-
-
-
-
-if __name__ == "__main__":
-    # train_losses, valid_losses = sst_train()
-    # #visulaize_losses(train_losses, valid_losses)
-    # print(train_losses , valid_losses)
-
+def nli_train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Data creation part
@@ -228,5 +219,20 @@ if __name__ == "__main__":
         test1_losses.append(eval_nli(model, test1_dataloader, loss_func, device))
         test2_losses.append(eval_nli(model, test2_dataloader, loss_func, device))
     
-    print(train_losses, test1_losses, test2_losses)
-   
+    return train_losses, test1_losses, test2_losses
+
+
+def visulaize_losses_stt(train_losses, test1_loss, test2_loss):
+    plt.plot(train_losses, label="train")
+    plt.plot(test1_loss, label="test1")
+    plt.plot(test2_loss, label="test2")
+    plt.legend()
+    plt.show()
+
+
+
+    
+
+if __name__ == "__main__":
+    out = nli_train()
+    print(out)
